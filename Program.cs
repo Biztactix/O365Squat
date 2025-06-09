@@ -156,34 +156,35 @@ namespace O365TypoSquat
         }
     }
 
-    class Program
+    public class O365TypoSquatService
     {
-        static async Task Main(string[] args)
+        private readonly O365TypoSquatChecker _checker;
+
+        public O365TypoSquatService()
         {
-            var domains = TypoSquatGenerator.GenerateTypoSquatDomains("Google.com");
-            var checker = new O365TypoSquatChecker();
-            
-            Console.WriteLine($"Generated {domains.Count} typosquat variations for Google.com");
-            Console.WriteLine("Testing for O365 availability...\n");
-            
-            var tasks = domains.Select(async domain =>
-            {
-                var result = await checker.CheckO365TypoSquat(domain);
-                
-                if (result.OnMicrosoftTest || result.SharePointTest || result.DomainTest)
-                {
-                    Console.WriteLine($"Domain: {result.Domain}");
-                    Console.WriteLine($"  OnMicrosoft: {result.OnMicrosoftTest}");
-                    Console.WriteLine($"  SharePoint: {result.SharePointTest}");
-                    Console.WriteLine($"  Domain: {result.DomainTest}");
-                    Console.WriteLine();
-                }
-                
-                return result;
-            });
-            
-            await Task.WhenAll(tasks);
-            Console.WriteLine("Scan complete.");
+            _checker = new O365TypoSquatChecker();
+        }
+
+        public async Task<O365TypoSquatResult> TestDomainAsync(string domain)
+        {
+            return await _checker.CheckO365TypoSquat(domain);
+        }
+
+        public async Task<List<O365TypoSquatResult>> TestDomainsAsync(IEnumerable<string> domains)
+        {
+            var tasks = domains.Select(domain => _checker.CheckO365TypoSquat(domain));
+            return (await Task.WhenAll(tasks)).ToList();
+        }
+
+        public List<string> GenerateTypoSquatVariations(string domainName)
+        {
+            return TypoSquatGenerator.GenerateTypoSquatDomains(domainName);
+        }
+
+        public async Task<List<O365TypoSquatResult>> GenerateAndTestTypoSquatsAsync(string domainName)
+        {
+            var variations = GenerateTypoSquatVariations(domainName);
+            return await TestDomainsAsync(variations);
         }
     }
 }
