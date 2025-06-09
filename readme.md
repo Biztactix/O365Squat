@@ -39,9 +39,26 @@ var results = await service.GenerateAndTestTypoSquatsAsync("google.com");
 var allResults = await service.GenerateAndTestTypoSquatsWithTldsAsync("google.com");
 ```
 
+## Scale and Performance
+
+**Example: Testing "Biztactix.com.au"**
+
+| Method | Variations Generated | DNS Requests | Coverage |
+|--------|---------------------|--------------|----------|
+| `GenerateTypoSquatVariations()` | 29 domains | 87 requests | Same TLD (.com.au) |
+| `GenerateTypoSquatVariationsWithTlds()` | 2,871 domains | 8,613 requests | All 99 TLDs |
+
+**Variation breakdown for "Biztactix":**
+- Homoglyph variations: 10 (i→l, z→s with suffixes)  
+- Character omissions: 8 (removing adjacent pairs)
+- Character transpositions: 7 (swapping adjacent chars)
+- Pluralization: 4 (+s, +a, +en, +t suffixes)
+
+**DNS requests per domain:** 3 queries (OnMicrosoft, SharePoint, direct domain)
+
 ## TLD Coverage
 
-The library tests against 119 domains including:
+The library tests against 99 domains including:
 - Standard TLDs: .com, .net, .org, .info, .biz
 - Country codes: .us, .uk, .de, .fr, .au, .ca
 - Second-level domains: .co.uk, .com.au, .co.nz, .com.br, .co.za
