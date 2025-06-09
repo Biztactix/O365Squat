@@ -43,6 +43,31 @@ namespace O365TypoSquat
             { 31, ("r", "n") }
         };
 
+        private static readonly string[] CommonTlds = new[]
+        {
+            "com", "net", "org", "info", "biz", "co", "io", "me", "tv", "cc",
+            "tk", "ml", "ga", "cf", "ly", "sh", "eu", "us", "uk", "de", 
+            "fr", "it", "es", "nl", "pl", "ru", "cn", "jp", "in", "br",
+            "au", "ca", "mx", "ar", "cl", "co", "pe", "ve", "za", "ng",
+            "ke", "ma", "eg", "il", "tr", "sa", "ae", "pk", "bd", "lk",
+            "com.au", "net.au", "org.au", "edu.au", "gov.au", "asn.au",
+            "co.uk", "org.uk", "me.uk", "ltd.uk", "plc.uk", "net.uk",
+            "co.nz", "net.nz", "org.nz", "ac.nz", "school.nz", "govt.nz",
+            "com.br", "net.br", "org.br", "gov.br", "edu.br", "mil.br",
+            "co.za", "net.za", "org.za", "gov.za", "edu.za", "ac.za",
+            "co.in", "net.in", "org.in", "gov.in", "edu.in", "ac.in",
+            "com.cn", "net.cn", "org.cn", "gov.cn", "edu.cn", "ac.cn",
+            "co.jp", "ne.jp", "or.jp", "go.jp", "ac.jp", "ad.jp",
+            "com.mx", "net.mx", "org.mx", "gob.mx", "edu.mx", "mil.mx",
+            "com.sg", "net.sg", "org.sg", "gov.sg", "edu.sg", "per.sg",
+            "com.my", "net.my", "org.my", "gov.my", "edu.my", "mil.my",
+            "com.hk", "net.hk", "org.hk", "gov.hk", "edu.hk", "idv.hk",
+            "com.tw", "net.tw", "org.tw", "gov.tw", "edu.tw", "idv.tw",
+            "co.kr", "ne.kr", "or.kr", "go.kr", "ac.kr", "mil.kr",
+            "com.tr", "net.tr", "org.tr", "gov.tr", "edu.tr", "mil.tr",
+            "co.il", "net.il", "org.il", "gov.il", "ac.il", "idf.il"
+        };
+
         public static List<string> GenerateTypoSquatDomains(string domainName)
         {
             var parts = domainName.Split('.');
@@ -97,6 +122,78 @@ namespace O365TypoSquat
             // Add TLD and remove duplicates
             var combinedDomains = variations
                 .Select(v => $"{v}.{tld}")
+                .Distinct()
+                .Where(d => d != domainName)
+                .OrderBy(d => d)
+                .ToList();
+            
+            return combinedDomains;
+        }
+
+        public static List<string> GenerateTypoSquatDomainsWithTldVariations(string domainName)
+        {
+            var parts = domainName.Split('.');
+            var domain = parts.First();
+            
+            var variations = new List<string>();
+            
+            // Generate domain variations (without TLD)
+            var domainVariations = new List<string> { domain };
+            
+            // Homoglyph variations
+            for (int i = 0; i < 29; i++)
+            {
+                if (ReplacementGlyphs.ContainsKey(i))
+                {
+                    var (original, replacement) = ReplacementGlyphs[i];
+                    var newDomain = domain.Replace(original, replacement);
+                    
+                    domainVariations.Add(newDomain);
+                    domainVariations.Add(newDomain + "s");
+                    domainVariations.Add(newDomain + "a");
+                    domainVariations.Add(newDomain + "t");
+                    domainVariations.Add(newDomain + "en");
+                }
+            }
+            
+            // Bit squatting and omission
+            for (int i = 0; i < domain.Length; i++)
+            {
+                // Character omission
+                if (i + 1 < domain.Length)
+                {
+                    var omitted = domain.Substring(0, i) + domain.Substring(i + 2);
+                    domainVariations.Add(omitted);
+                }
+                
+                // Character transposition
+                if (i + 2 < domain.Length)
+                {
+                    var transposed = domain.Substring(0, i) + 
+                                   domain[i + 1] + 
+                                   domain[i] + 
+                                   domain.Substring(i + 2);
+                    domainVariations.Add(transposed);
+                }
+            }
+            
+            // Plurals
+            domainVariations.Add(domain + "s");
+            domainVariations.Add(domain + "a");
+            domainVariations.Add(domain + "en");
+            domainVariations.Add(domain + "t");
+            
+            // Combine all domain variations with all TLDs
+            foreach (var domainVar in domainVariations.Distinct())
+            {
+                foreach (var tld in CommonTlds)
+                {
+                    variations.Add($"{domainVar}.{tld}");
+                }
+            }
+            
+            // Remove original domain and duplicates
+            var combinedDomains = variations
                 .Distinct()
                 .Where(d => d != domainName)
                 .OrderBy(d => d)
@@ -181,9 +278,20 @@ namespace O365TypoSquat
             return TypoSquatGenerator.GenerateTypoSquatDomains(domainName);
         }
 
+        public List<string> GenerateTypoSquatVariationsWithTlds(string domainName)
+        {
+            return TypoSquatGenerator.GenerateTypoSquatDomainsWithTldVariations(domainName);
+        }
+
         public async Task<List<O365TypoSquatResult>> GenerateAndTestTypoSquatsAsync(string domainName)
         {
             var variations = GenerateTypoSquatVariations(domainName);
+            return await TestDomainsAsync(variations);
+        }
+
+        public async Task<List<O365TypoSquatResult>> GenerateAndTestTypoSquatsWithTldsAsync(string domainName)
+        {
+            var variations = GenerateTypoSquatVariationsWithTlds(domainName);
             return await TestDomainsAsync(variations);
         }
     }
